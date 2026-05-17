@@ -141,8 +141,97 @@ def interpret_candidates_with_llm(candidates: list[dict[str, Any]], targets: dic
     prepared = prepare_candidates_for_prompt(candidates)
     raw_text = _call_llm(build_candidates_prompt(prepared, targets), config)
     parsed = _loads_json_object(raw_text)
+    parsed = repair_candidate_interpretations(parsed, prepared)
     validate_candidate_interpretations(parsed, targets, prepared)
     return parsed
+
+
+def repair_candidate_interpretations(data: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    by_id = {candidate["candidate_id"]: candidate for candidate in candidates}
+    repaired_by_source: dict[str, dict[str, Any]] = {}
+    review_items = _normalize_review_items(data.get("review_items", []), by_id)
+    review_ids = {item["candidate_id"] for item in review_items if item.get("candidate_id")}
+    accepted_ids: set[str] = set()
+
+    for interpretation in data.get("interpretations", []) or []:
+        if not isinstance(interpretation, dict):
+            continue
+        for rule in interpretation.get("rules", []) or []:
+            if not isinstance(rule, dict):
+                continue
+            candidate_id = rule.get("candidate_id")
+            candidate = by_id.get(candidate_id)
+            if not candidate:
+                continue
+
+            reason = _candidate_review_reason(candidate)
+            if reason:
+                if candidate_id not in review_ids:
+                    review_items.append(
+                        {
+                            "candidate_id": candidate_id,
+                            "source_id": candidate.get("source_id"),
+                            "reason": reason,
+                        }
+                    )
+                    review_ids.add(candidate_id)
+                continue
+
+            source_key = candidate.get("source_id") or candidate.get("source_url") or "unknown"
+            repaired = repaired_by_source.setdefault(source_key, _empty_interpretation_from_candidate(candidate))
+            repaired_rule = _rule_from_candidate(candidate)
+            repaired_rule["resumo_regra"] = rule.get("resumo_regra") or repaired_rule["resumo_regra"]
+            repaired_rule["observacoes"] = rule.get("observacoes", repaired_rule.get("observacoes"))
+            repaired_rule["ativo"] = bool(rule.get("ativo", repaired_rule["ativo"]))
+            repaired_rule["confianca"] = "ALTA"
+            repaired["rules"].append(repaired_rule)
+            repaired["_evidences"].append(candidate.get("evidence", ""))
+            accepted_ids.add(candidate_id)
+
+    for candidate in candidates:
+        candidate_id = candidate["candidate_id"]
+        if candidate_id in accepted_ids or candidate_id in review_ids:
+            continue
+        reason = _candidate_review_reason(candidate)
+        if reason:
+            review_items.append(
+                {
+                    "candidate_id": candidate_id,
+                    "source_id": candidate.get("source_id"),
+                    "reason": reason,
+                }
+            )
+
+    interpretations = []
+    for interpretation in repaired_by_source.values():
+        evidences = [text for text in interpretation.pop("_evidences", []) if text]
+        interpretation["source"]["texto_relevante"] = "\n".join(evidences)[:5000]
+        interpretations.append(interpretation)
+
+    return {"interpretations": interpretations, "review_items": review_items}
+
+
+def _normalize_review_items(items: Any, by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    if not isinstance(items, list):
+        return normalized
+    seen: set[str] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = item.get("candidate_id")
+        candidate = by_id.get(candidate_id)
+        if not candidate or candidate_id in seen:
+            continue
+        normalized.append(
+            {
+                "candidate_id": candidate_id,
+                "source_id": item.get("source_id") or candidate.get("source_id"),
+                "reason": item.get("reason") or _candidate_review_reason(candidate) or "LLM indicou revisao.",
+            }
+        )
+        seen.add(candidate_id)
+    return normalized
 
 
 def interpret_candidates_deterministically(candidates: list[dict[str, Any]], targets: dict[str, Any]) -> dict[str, Any]:
@@ -165,18 +254,7 @@ def interpret_candidates_deterministically(candidates: list[dict[str, Any]], tar
         source_key = candidate.get("source_id") or candidate.get("source_url") or "unknown"
         interpretation = interpretations_by_source.setdefault(
             source_key,
-            {
-                "source": {
-                    "tipo": candidate.get("source_tipo") or "OUTRO",
-                    "titulo": candidate.get("source_title"),
-                    "url": candidate.get("source_url"),
-                    "orgao": candidate.get("source_orgao"),
-                    "data_publicacao": candidate.get("source_data_publicacao"),
-                    "texto_relevante": "",
-                },
-                "rules": [],
-                "_evidences": [],
-            },
+            _empty_interpretation_from_candidate(candidate),
         )
         interpretation["rules"].append(_rule_from_candidate(candidate))
         interpretation["_evidences"].append(candidate.get("evidence", ""))
@@ -208,6 +286,21 @@ def _candidate_review_reason(candidate: dict[str, Any]) -> str | None:
     if candidate.get("tipo_regra") == "PAUTA" and candidate.get("valor_fixo") is None:
         return "PAUTA sem valor_fixo."
     return None
+
+
+def _empty_interpretation_from_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source": {
+            "tipo": candidate.get("source_tipo") or "OUTRO",
+            "titulo": candidate.get("source_title"),
+            "url": candidate.get("source_url"),
+            "orgao": candidate.get("source_orgao"),
+            "data_publicacao": candidate.get("source_data_publicacao"),
+            "texto_relevante": "",
+        },
+        "rules": [],
+        "_evidences": [],
+    }
 
 
 def _rule_from_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
