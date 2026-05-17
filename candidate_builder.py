@@ -137,6 +137,7 @@ def build_ricms_aliquota_candidates(source: dict[str, Any], scraped: dict[str, A
                             "Regra geral interna do RICMS/SP. Aplicar ao NCM apenas se nao houver excecao "
                             "especifica, reducao, isencao, ST ou regime especial."
                         ),
+                        extra={"mvp_promotable": True, "promotion_kind": "general_rate_rule"},
                     )
                 )
             break
@@ -190,6 +191,7 @@ def build_pis_candidates(source: dict[str, Any], scraped: dict[str, Any], target
                     confidence="MEDIA",
                     evidence=general,
                     notes="Aliquota geral de PIS nao cumulativo; validar regime do contribuinte e excecoes de bebidas.",
+                    extra={"mvp_promotable": True, "promotion_kind": "general_rate_rule"},
                 )
             )
     candidates.extend(build_beverage_special_candidates(source, texts, targets, "PIS"))
@@ -216,6 +218,7 @@ def build_cofins_candidates(source: dict[str, Any], scraped: dict[str, Any], tar
                     confidence="MEDIA",
                     evidence=general,
                     notes="Aliquota geral de COFINS nao cumulativa; validar regime do contribuinte e excecoes de bebidas.",
+                    extra={"mvp_promotable": True, "promotion_kind": "general_rate_rule"},
                 )
             )
     candidates.extend(build_beverage_special_candidates(source, texts, targets, "COFINS"))

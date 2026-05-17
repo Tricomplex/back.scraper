@@ -72,6 +72,14 @@ python pipeline.py --candidates-file artifacts/20260517_175409/structured_candid
 
 O resultado fica em `db_interpretations_from_candidates.json`. A LLM nao gera SQL; candidatos inseguros entram em `review_items`.
 
+Para o MVP SP + 3 NCMs, o backend aceita como regras de banco:
+
+- IPI/TIPI `ready_for_db`;
+- ICMS geral interno SP quando marcado como `general_rate_rule`;
+- PIS e COFINS gerais nao cumulativos quando marcados como `general_rate_rule`.
+
+DIFAL e ICMS-ST continuam em revisao ate existir aliquota/MVA/vigencia especifica segura.
+
 Se o provider LLM estiver sem quota, da para rodar o filtro conservador sem LLM:
 
 ```bash
@@ -87,6 +95,7 @@ python pipeline.py --apply-db
 ```
 
 Por padrao, esse comando abre transacao e faz rollback no final. Ele serve para validar conexao, IDs e inserts sem alterar a base.
+Na implementacao atual, o dry-run nao executa `INSERT`: ele apenas consulta dependencias existentes e retorna `planned_insert_rules`.
 
 ## Gravar de verdade no banco
 

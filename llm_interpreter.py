@@ -164,7 +164,7 @@ def repair_candidate_interpretations(data: dict[str, Any], candidates: list[dict
             if not candidate:
                 continue
 
-            reason = _candidate_review_reason(candidate)
+            reason = _candidate_review_reason(candidate, allow_mvp_promotion=True)
             if reason:
                 if candidate_id not in review_ids:
                     review_items.append(
@@ -192,7 +192,7 @@ def repair_candidate_interpretations(data: dict[str, Any], candidates: list[dict
         candidate_id = candidate["candidate_id"]
         if candidate_id in accepted_ids or candidate_id in review_ids:
             continue
-        reason = _candidate_review_reason(candidate)
+        reason = _candidate_review_reason(candidate, allow_mvp_promotion=True)
         if reason:
             review_items.append(
                 {
@@ -201,6 +201,13 @@ def repair_candidate_interpretations(data: dict[str, Any], candidates: list[dict
                     "reason": reason,
                 }
             )
+            continue
+
+        source_key = candidate.get("source_id") or candidate.get("source_url") or "unknown"
+        repaired = repaired_by_source.setdefault(source_key, _empty_interpretation_from_candidate(candidate))
+        repaired["rules"].append(_rule_from_candidate(candidate))
+        repaired["_evidences"].append(candidate.get("evidence", ""))
+        accepted_ids.add(candidate_id)
 
     interpretations = []
     for interpretation in repaired_by_source.values():
@@ -270,10 +277,14 @@ def interpret_candidates_deterministically(candidates: list[dict[str, Any]], tar
     return result
 
 
-def _candidate_review_reason(candidate: dict[str, Any]) -> str | None:
-    if candidate.get("status") != "ready_for_db":
+def _candidate_review_reason(candidate: dict[str, Any], allow_mvp_promotion: bool = False) -> str | None:
+    if candidate.get("status") != "ready_for_db" and not (
+        allow_mvp_promotion and _is_mvp_promotable_candidate(candidate)
+    ):
         return f"status={candidate.get('status')} exige revisao."
-    if candidate.get("confidence") != "ALTA":
+    if candidate.get("confidence") != "ALTA" and not (
+        allow_mvp_promotion and _is_mvp_promotable_candidate(candidate)
+    ):
         return f"confidence={candidate.get('confidence')} exige revisao."
     if not candidate.get("vigencia_inicio"):
         return "vigencia_inicio nao informada pela fonte/candidato."
@@ -286,6 +297,29 @@ def _candidate_review_reason(candidate: dict[str, Any]) -> str | None:
     if candidate.get("tipo_regra") == "PAUTA" and candidate.get("valor_fixo") is None:
         return "PAUTA sem valor_fixo."
     return None
+
+
+def _is_mvp_promotable_candidate(candidate: dict[str, Any]) -> bool:
+    extra = candidate.get("extra") or {}
+    if not extra.get("mvp_promotable"):
+        return False
+    if extra.get("promotion_kind") != "general_rate_rule":
+        return False
+    if candidate.get("source_id") not in {
+        "sp-ricms-2023",
+        "pis-cofins-lei-10637-2002",
+        "cofins-lei-10833-2003",
+    }:
+        return False
+    if candidate.get("tributo") not in {"ICMS", "PIS", "COFINS"}:
+        return False
+    if candidate.get("tipo_regra") != "ALIQUOTA":
+        return False
+    if candidate.get("confidence") != "MEDIA":
+        return False
+    if (candidate.get("extra") or {}).get("revoked_context"):
+        return False
+    return True
 
 
 def _empty_interpretation_from_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
@@ -490,17 +524,23 @@ Escopo do MVP:
 Regras criticas:
 1. Nao gere SQL.
 2. Nao invente aliquota, vigencia, excecao, produto, fonte legal ou trecho.
-3. Inclua em rules somente candidatos com status "ready_for_db" e confidence "ALTA".
-4. Candidatos "needs_review", com confidence MEDIA/BAIXA, evidencia de revogacao,
-   valor nulo quando a regra exige valor, ou vigencia incerta devem ir para review_items.
-5. Cada rule deve preservar candidate_id, tributo, jurisdicao, produto, tipo_regra,
+3. Inclua em rules todos os candidatos com status "ready_for_db" e confidence "ALTA".
+4. Para este MVP, voce tambem pode promover candidatos "needs_review" SOMENTE quando:
+   extra.mvp_promotable=true, extra.promotion_kind="general_rate_rule", tributo ICMS/PIS/COFINS,
+   tipo_regra ALIQUOTA, aliquota_percentual preenchida, vigencia_inicio preenchida,
+   evidencia sem revogacao e confidence "MEDIA".
+   Quando estas condicoes forem atendidas, inclua o candidato em rules.
+5. Candidatos "needs_review" fora da regra de promocao acima, com confidence BAIXA,
+   evidencia de revogacao, valor nulo quando a regra exige valor, ou vigencia incerta
+   devem ir para review_items.
+6. Cada rule deve preservar candidate_id, tributo, jurisdicao, produto, tipo_regra,
    aliquota_percentual, valor_fixo e unidade_valor do candidato.
-6. source deve preservar source_tipo/source_title/source_url/source_orgao dos candidatos.
-7. texto_relevante da fonte deve ser composto por evidencias literais dos candidatos aceitos.
-8. vigencia_inicio e vigencia_fim devem representar validade real. Se a evidencia nao sustentar
+7. source deve preservar source_tipo/source_title/source_url/source_orgao dos candidatos.
+8. texto_relevante da fonte deve ser composto por evidencias literais dos candidatos aceitos.
+9. vigencia_inicio e vigencia_fim devem representar validade real. Se a evidencia nao sustentar
    vigencia_inicio, nao inclua o candidato em rules.
-9. ativo deve ser true apenas se a regra estiver vigente agora.
-10. Retorne JSON puro, sem markdown.
+10. ativo deve ser true apenas se a regra estiver vigente agora.
+11. Retorne JSON puro, sem markdown.
 
 Formato obrigatorio:
 {{
@@ -655,8 +695,8 @@ def _validate_rule_matches_candidate(
     rule_index: int,
 ) -> None:
     prefix = f"Interpretacao {interpretation_index}, regra {rule_index}"
-    if candidate.get("status") != "ready_for_db" or candidate.get("confidence") != "ALTA":
-        raise ValueError(f"{prefix}: somente candidato ready_for_db/ALTA pode virar regra.")
+    if _candidate_review_reason(candidate, allow_mvp_promotion=True):
+        raise ValueError(f"{prefix}: candidato nao elegivel para regra de banco.")
     if source_url and candidate.get("source_url") and source_url != candidate.get("source_url"):
         raise ValueError(f"{prefix}: fonte da regra nao corresponde ao candidato.")
 

@@ -33,6 +33,9 @@ def connect():
 
 def apply_interpretation(data: dict[str, Any], targets: dict[str, Any], dry_run: bool = True) -> dict[str, Any]:
     validate_interpretation(data, targets)
+    if dry_run:
+        return plan_interpretation(data, targets)
+
     conn = connect()
     try:
         conn.start_transaction()
@@ -61,8 +64,10 @@ def apply_interpretation(data: dict[str, Any], targets: dict[str, Any], dry_run:
 
         return {
             "dry_run": dry_run,
+            "mutates_db": True,
             "source_id": source_id,
             "inserted_rules": inserted,
+            "planned_insert_rules": inserted,
             "skipped_existing_rules": skipped,
             "rule_ids": rule_ids,
         }
@@ -80,20 +85,77 @@ def apply_interpretation_batch(data: dict[str, Any], targets: dict[str, Any], dr
 
     results = []
     total_inserted = 0
+    total_planned = 0
     total_skipped = 0
     for interpretation in interpretations:
         result = apply_interpretation(interpretation, targets, dry_run=dry_run)
         results.append(result)
         total_inserted += result["inserted_rules"]
+        total_planned += result.get("planned_insert_rules", result["inserted_rules"])
         total_skipped += result["skipped_existing_rules"]
 
     return {
         "dry_run": dry_run,
+        "mutates_db": not dry_run,
         "interpretations": len(interpretations),
         "inserted_rules": total_inserted,
+        "planned_insert_rules": total_planned,
         "skipped_existing_rules": total_skipped,
         "results": results,
     }
+
+
+def plan_interpretation(data: dict[str, Any], targets: dict[str, Any]) -> dict[str, Any]:
+    validate_interpretation(data, targets)
+    conn = connect()
+    try:
+        source_id = _find_source(conn, data["source"])
+        planned = 0
+        skipped = 0
+        missing_dependencies = 0
+        rule_ids: list[int] = []
+        planned_rules: list[dict[str, Any]] = []
+
+        for rule in data["rules"]:
+            tributo_id = _find_tax(conn, rule["tributo"])
+            jurisdicao_id = _find_jurisdiction(conn, rule["jurisdicao"])
+            produto_id = _find_product(conn, rule["produto"])
+
+            if source_id and tributo_id and jurisdicao_id and produto_id:
+                existing_id = _find_existing_rule(conn, rule, tributo_id, jurisdicao_id, produto_id, source_id)
+                if existing_id:
+                    skipped += 1
+                    rule_ids.append(existing_id)
+                    continue
+            else:
+                missing_dependencies += 1
+
+            planned += 1
+            planned_rules.append(
+                {
+                    "tributo": rule["tributo"],
+                    "ncm": rule["produto"]["ncm"],
+                    "produto": rule["produto"].get("descricao"),
+                    "tipo_regra": rule["tipo_regra"],
+                    "aliquota_percentual": rule.get("aliquota_percentual"),
+                    "valor_fixo": rule.get("valor_fixo"),
+                    "vigencia_inicio": rule["vigencia_inicio"],
+                }
+            )
+
+        return {
+            "dry_run": True,
+            "mutates_db": False,
+            "source_id": source_id,
+            "inserted_rules": 0,
+            "planned_insert_rules": planned,
+            "skipped_existing_rules": skipped,
+            "missing_dependency_rules": missing_dependencies,
+            "rule_ids": rule_ids,
+            "planned_rules": planned_rules,
+        }
+    finally:
+        conn.close()
 
 
 def _fetch_one(conn, sql: str, params: tuple[Any, ...]) -> dict[str, Any] | None:
@@ -113,23 +175,21 @@ def _execute(conn, sql: str, params: tuple[Any, ...]) -> int:
 
 
 def _get_or_create_tax(conn, name: str) -> int:
-    row = _fetch_one(conn, "SELECT id FROM tributos WHERE nome = %s", (name,))
-    if row:
-        return int(row["id"])
+    existing_id = _find_tax(conn, name)
+    if existing_id:
+        return existing_id
     return _execute(conn, "INSERT INTO tributos (nome, ativo) VALUES (%s, 1)", (name,))
 
 
+def _find_tax(conn, name: str) -> int | None:
+    row = _fetch_one(conn, "SELECT id FROM tributos WHERE nome = %s", (name,))
+    return int(row["id"]) if row else None
+
+
 def _get_or_create_jurisdiction(conn, data: dict[str, Any]) -> int:
-    row = _fetch_one(
-        conn,
-        """
-        SELECT id FROM jurisdicoes
-        WHERE tipo = %s AND uf <=> %s AND municipio <=> %s AND codigo_ibge <=> %s
-        """,
-        (data.get("tipo"), data.get("uf"), data.get("municipio"), data.get("codigo_ibge")),
-    )
-    if row:
-        return int(row["id"])
+    existing_id = _find_jurisdiction(conn, data)
+    if existing_id:
+        return existing_id
     return _execute(
         conn,
         """
@@ -140,27 +200,42 @@ def _get_or_create_jurisdiction(conn, data: dict[str, Any]) -> int:
     )
 
 
-def _get_or_create_product(conn, data: dict[str, Any]) -> int:
-    ncm = data["ncm"]
-    descricao = data["descricao"]
+def _find_jurisdiction(conn, data: dict[str, Any]) -> int | None:
     row = _fetch_one(
         conn,
-        "SELECT id FROM produtos_fiscais WHERE ncm = %s AND descricao = %s",
-        (ncm, descricao),
+        """
+        SELECT id FROM jurisdicoes
+        WHERE tipo = %s AND uf <=> %s AND municipio <=> %s AND codigo_ibge <=> %s
+        """,
+        (data.get("tipo"), data.get("uf"), data.get("municipio"), data.get("codigo_ibge")),
     )
-    if row:
-        return int(row["id"])
+    return int(row["id"]) if row else None
+
+
+def _get_or_create_product(conn, data: dict[str, Any]) -> int:
+    existing_id = _find_product(conn, data)
+    if existing_id:
+        return existing_id
     return _execute(
         conn,
         """
         INSERT INTO produtos_fiscais (ncm, descricao, categoria, ativo)
         VALUES (%s, %s, %s, 1)
         """,
-        (ncm, descricao, data.get("categoria")),
+        (data["ncm"], data["descricao"], data.get("categoria")),
     )
 
 
-def _get_or_create_source(conn, data: dict[str, Any]) -> int:
+def _find_product(conn, data: dict[str, Any]) -> int | None:
+    row = _fetch_one(
+        conn,
+        "SELECT id FROM produtos_fiscais WHERE ncm = %s AND descricao = %s",
+        (data["ncm"], data["descricao"]),
+    )
+    return int(row["id"]) if row else None
+
+
+def _find_source(conn, data: dict[str, Any]) -> int | None:
     row = None
     if data.get("url"):
         row = _fetch_one(conn, "SELECT id FROM fontes_legais WHERE url = %s", (data["url"],))
@@ -175,6 +250,13 @@ def _get_or_create_source(conn, data: dict[str, Any]) -> int:
         )
     if row:
         return int(row["id"])
+    return None
+
+
+def _get_or_create_source(conn, data: dict[str, Any]) -> int:
+    existing_id = _find_source(conn, data)
+    if existing_id:
+        return existing_id
     return _execute(
         conn,
         """

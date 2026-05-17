@@ -27,6 +27,8 @@
       "titulo": "RICMS/SP - Artigos 52 a 56-C - aliquotas",
       "url": "https://legislacao.fazenda.sp.gov.br/Paginas/art052.aspx",
       "orgao": "SEFAZ SP",
+      "data_publicacao": "2000-11-30",
+      "vigencia_inicio": "2016-02-23",
       "keywords": ["ICMS", "bebidas", "refrigerante", "agua", "suco", "DIFAL", "aliquota"]
     },
     {
@@ -63,6 +65,8 @@
       "titulo": "Lei 10.637/2002 - PIS/Pasep nao cumulativo",
       "url": "https://www.planalto.gov.br/ccivil_03/leis/2002/l10637.htm",
       "orgao": "Presidencia da Republica",
+      "data_publicacao": "2002-12-30",
+      "vigencia_inicio": "2002-12-01",
       "keywords": ["PIS", "PASEP", "aliquota", "receita bruta", "bebidas"]
     },
     {
@@ -71,6 +75,8 @@
       "titulo": "Lei 10.833/2003 - COFINS nao cumulativa",
       "url": "https://www.planalto.gov.br/ccivil_03/leis/2003/l10.833.htm",
       "orgao": "Presidencia da Republica",
+      "data_publicacao": "2003-12-29",
+      "vigencia_inicio": "2004-02-01",
       "keywords": ["COFINS", "aliquota", "receita bruta", "bebidas"]
     }
   ]
