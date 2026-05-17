@@ -4,8 +4,13 @@ import logging
 import re
 import sys
 import time
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 from urllib.parse import urldefrag, urljoin, urlparse
+
+VENDOR_DIR = Path(__file__).parent / ".vendor"
+if VENDOR_DIR.exists():
+    sys.path.insert(0, str(VENDOR_DIR))
 
 import requests
 from bs4 import BeautifulSoup
@@ -96,6 +101,20 @@ TIMEOUT = 15
 MIN_TEXT_LENGTH = 2
 MAX_DEPTH = 2
 FOLLOW_EXTERNAL_LINKS = False
+BLOCKED_PATTERNS = [
+    "access denied",
+    "request blocked",
+    "forbidden",
+    "captcha",
+    "cloudflare",
+    "unusual traffic",
+    "verifique que voce nao e um robo",
+    "verifique que você não é um robô",
+    "acesso negado",
+    "nao autorizado",
+    "não autorizado",
+    "bloqueado",
+]
 
 
 def build_session() -> requests.Session:
@@ -459,6 +478,21 @@ def extract_text_blocks(soup: BeautifulSoup) -> Tuple[List[str], List[Dict[str, 
     return texts, text_blocks
 
 
+def detect_blocked_response(status_code: int, title: str, texts: List[str], body_text: str) -> Optional[str]:
+    if status_code in {401, 403, 429, 503}:
+        return f"HTTP {status_code} indica bloqueio, autenticacao, rate limit ou indisponibilidade"
+
+    haystack = normalize_space(" ".join([title, " ".join(texts[:20]), body_text[:3000]])).lower()
+    for pattern in BLOCKED_PATTERNS:
+        if pattern in haystack:
+            return f"Pagina parece bloqueada por conter marcador: {pattern}"
+
+    if status_code == 200 and len(texts) < 3:
+        return "Pouco texto extraido para uma pagina HTML; possivel bloqueio ou pagina vazia"
+
+    return None
+
+
 def scrape(
     url: str,
     retry_count: int = 0,
@@ -536,6 +570,7 @@ def scrape(
     images = extract_images(soup, final_url)
     canonical_url = extract_canonical_url(soup, final_url)
     texts, text_blocks = extract_text_blocks(soup)
+    blocked_reason = detect_blocked_response(response.status_code, title, texts, soup.get_text(" ", strip=True))
 
     data = {
         "url": url,
@@ -562,8 +597,15 @@ def scrape(
             "total_structured_data": len(structured_data),
             "total_texts": len(texts),
         },
-        "success": True,
+        "blocked": blocked_reason is not None,
+        "blocked_reason": blocked_reason,
+        "success": blocked_reason is None,
     }
+
+    if blocked_reason:
+        data["error"] = blocked_reason
+        logger.warning("Resposta de %s parece bloqueada: %s", final_url, blocked_reason)
+        return data
 
     logger.info("Scraping de %s concluido", final_url)
     logger.info("Titulo: %s", title or "(sem titulo)")

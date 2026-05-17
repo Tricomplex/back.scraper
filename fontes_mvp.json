@@ -1,0 +1,77 @@
+{
+  "targets": {
+    "ufs": ["SP"],
+    "ncms": [
+      {
+        "ncm": "22011000",
+        "descricao": "Agua mineral ou agua gaseificada, sem adicao de acucar ou outros edulcorantes nem aromatizada",
+        "apelidos": ["agua", "agua mineral", "agua gaseificada"]
+      },
+      {
+        "ncm": "22021000",
+        "descricao": "Refrigerantes e outras bebidas nao alcoolicas aromatizadas ou adicionadas de acucar",
+        "apelidos": ["refrigerante", "bebida gaseificada", "bebidas prontas"]
+      },
+      {
+        "ncm": "20099000",
+        "descricao": "Misturas de sucos de frutas ou de produtos horticolas",
+        "apelidos": ["suco", "sucos", "misturas de sucos"]
+      }
+    ],
+    "tributos": ["ICMS", "DIFAL", "PIS", "COFINS", "IPI", "ICMS-ST"]
+  },
+  "sources": [
+    {
+      "id": "sp-ricms-2023",
+      "tipo": "SEFAZ",
+      "titulo": "RICMS/SP - Artigos 52 a 56-C - aliquotas",
+      "url": "https://legislacao.fazenda.sp.gov.br/Paginas/art052.aspx",
+      "orgao": "SEFAZ SP",
+      "keywords": ["ICMS", "bebidas", "refrigerante", "agua", "suco", "DIFAL", "aliquota"]
+    },
+    {
+      "id": "sp-portaria-cat-68-2019",
+      "tipo": "PORTARIA",
+      "titulo": "Portaria CAT 68/2019 - Substituicao tributaria por segmento",
+      "url": "https://legislacao.fazenda.sp.gov.br/Paginas/Portaria-CAT-68-de-2019.aspx",
+      "orgao": "SEFAZ SP",
+      "keywords": ["substituicao tributaria", "bebidas", "2201", "2202", "2009", "ICMS-ST"]
+    },
+    {
+      "id": "sp-ricms-difal-art253-258",
+      "tipo": "SEFAZ",
+      "titulo": "RICMS/SP - Artigos 253 a 258 - DIFAL e consumidor final",
+      "url": "https://legislacao.fazenda.sp.gov.br/Paginas/art253.aspx",
+      "orgao": "SEFAZ SP",
+      "keywords": ["DIFAL", "diferenca entre as aliquotas", "consumidor final", "nao contribuinte", "Portaria SRE-21/22"]
+    },
+    {
+      "id": "tipi-xlsx-receita",
+      "kind": "xlsx",
+      "tipo": "OUTRO",
+      "titulo": "TIPI em formato XLSX - Receita Federal",
+      "url": "https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/legislacao/documentos-e-arquivos/tipi.xlsx/view",
+      "xlsx_url": "https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/legislacao/documentos-e-arquivos/tipi.xlsx/@@download/file",
+      "orgao": "Receita Federal",
+      "data_publicacao": "2022-07-29",
+      "vigencia_inicio": "2022-08-01",
+      "keywords": ["TIPI", "IPI", "2201", "2202", "2009"]
+    },
+    {
+      "id": "pis-cofins-lei-10637-2002",
+      "tipo": "LEI",
+      "titulo": "Lei 10.637/2002 - PIS/Pasep nao cumulativo",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/2002/l10637.htm",
+      "orgao": "Presidencia da Republica",
+      "keywords": ["PIS", "PASEP", "aliquota", "receita bruta", "bebidas"]
+    },
+    {
+      "id": "cofins-lei-10833-2003",
+      "tipo": "LEI",
+      "titulo": "Lei 10.833/2003 - COFINS nao cumulativa",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/2003/l10.833.htm",
+      "orgao": "Presidencia da Republica",
+      "keywords": ["COFINS", "aliquota", "receita bruta", "bebidas"]
+    }
+  ]
+}

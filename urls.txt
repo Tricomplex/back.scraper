@@ -1,3 +1,7 @@
-https://site1.com
-https://site2.com
-https://site3.com
+https://legislacao.fazenda.sp.gov.br/Paginas/ind_temas.aspx
+https://legislacao.fazenda.sp.gov.br/Paginas/art052.aspx
+https://legislacao.fazenda.sp.gov.br/Paginas/Portaria-CAT-68-de-2019.aspx
+https://legislacao.fazenda.sp.gov.br/Paginas/art253.aspx
+https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/legislacao/documentos-e-arquivos/tipi.xlsx/view
+https://www.planalto.gov.br/ccivil_03/leis/2003/l10.833.htm
+https://www.planalto.gov.br/ccivil_03/leis/2002/l10637.htm
