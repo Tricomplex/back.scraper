@@ -16,6 +16,36 @@
         "ncm": "20099000",
         "descricao": "Misturas de sucos de frutas ou de produtos horticolas",
         "apelidos": ["suco", "sucos", "misturas de sucos"]
+      },
+      {
+        "ncm": "22030000",
+        "descricao": "Cervejas de malte",
+        "apelidos": ["cerveja", "cervejas", "cerveja de malte"]
+      },
+      {
+        "ncm": "84433233",
+        "descricao": "Impressoras com tecnologia de impressao por jato de tinta",
+        "apelidos": ["impressora", "impressoras", "impressora jato de tinta"]
+      },
+      {
+        "ncm": "84439923",
+        "descricao": "Cartuchos de tinta para impressoras",
+        "apelidos": ["cartucho", "cartucho de impressora", "cartucho de tinta"]
+      },
+      {
+        "ncm": "84439933",
+        "descricao": "Toners para impressoras",
+        "apelidos": ["toner", "toner de impressora", "cartucho de toner"]
+      },
+      {
+        "ncm": "48025610",
+        "descricao": "Papel em folhas, sem fibras obtidas por processo mecanico ou quimico-mecanico, de peso igual ou superior a 40 g/m2 mas nao superior a 150 g/m2",
+        "apelidos": ["papel", "papel sulfite", "papel para impressao"]
+      },
+      {
+        "ncm": "19059090",
+        "descricao": "Outros produtos de padaria, pastelaria, confeitaria ou da industria de bolachas e biscoitos",
+        "apelidos": ["alimento", "alimentos", "produto alimenticio", "padaria", "biscoito"]
       }
     ],
     "tributos": ["ICMS", "DIFAL", "PIS", "COFINS", "IPI", "ICMS-ST"]
@@ -29,7 +59,7 @@
       "orgao": "SEFAZ SP",
       "data_publicacao": "2000-11-30",
       "vigencia_inicio": "2016-02-23",
-      "keywords": ["ICMS", "bebidas", "refrigerante", "agua", "suco", "DIFAL", "aliquota"]
+      "keywords": ["ICMS", "bebidas", "refrigerante", "agua", "suco", "cerveja", "impressora", "cartucho", "toner", "papel", "alimento", "DIFAL", "aliquota"]
     },
     {
       "id": "sp-portaria-cat-68-2019",
@@ -37,7 +67,7 @@
       "titulo": "Portaria CAT 68/2019 - Substituicao tributaria por segmento",
       "url": "https://legislacao.fazenda.sp.gov.br/Paginas/Portaria-CAT-68-de-2019.aspx",
       "orgao": "SEFAZ SP",
-      "keywords": ["substituicao tributaria", "bebidas", "2201", "2202", "2009", "ICMS-ST"]
+      "keywords": ["substituicao tributaria", "bebidas", "cerveja", "impressora", "cartucho", "toner", "papel", "alimento", "2201", "2202", "2203", "2009", "8443", "4802", "1905", "ICMS-ST"]
     },
     {
       "id": "sp-ricms-difal-art253-258",
@@ -57,7 +87,7 @@
       "orgao": "Receita Federal",
       "data_publicacao": "2022-07-29",
       "vigencia_inicio": "2022-08-01",
-      "keywords": ["TIPI", "IPI", "2201", "2202", "2009"]
+      "keywords": ["TIPI", "IPI", "2201", "2202", "2203", "2009", "8443", "4802", "1905"]
     },
     {
       "id": "pis-cofins-lei-10637-2002",
@@ -67,7 +97,7 @@
       "orgao": "Presidencia da Republica",
       "data_publicacao": "2002-12-30",
       "vigencia_inicio": "2002-12-01",
-      "keywords": ["PIS", "PASEP", "aliquota", "receita bruta", "bebidas"]
+      "keywords": ["PIS", "PASEP", "aliquota", "receita bruta", "bebidas", "cerveja", "impressora", "cartucho", "toner", "papel", "alimento"]
     },
     {
       "id": "cofins-lei-10833-2003",
@@ -77,7 +107,7 @@
       "orgao": "Presidencia da Republica",
       "data_publicacao": "2003-12-29",
       "vigencia_inicio": "2004-02-01",
-      "keywords": ["COFINS", "aliquota", "receita bruta", "bebidas"]
+      "keywords": ["COFINS", "aliquota", "receita bruta", "bebidas", "cerveja", "impressora", "cartucho", "toner", "papel", "alimento"]
     }
   ]
 }

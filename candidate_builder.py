@@ -229,13 +229,13 @@ def build_beverage_special_candidates(source: dict[str, Any], texts: list[str], 
     candidates = []
     for index, text in enumerate(texts):
         norm = normalize(text)
-        if "22.01" not in text and "22.02" not in text and "2202" not in text:
+        if "22.01" not in text and "22.02" not in text and "22.03" not in text and "2202" not in text and "2203" not in text:
             continue
-        if not any(term in norm for term in ["agua", "refrigerante", "bebida"]):
+        if not any(term in norm for term in ["agua", "refrigerante", "bebida", "cerveja"]):
             continue
         evidence = " ".join(texts[index: min(len(texts), index + 3)])
         for target in targets["ncms"]:
-            if target["ncm"].startswith("2201") or target["ncm"].startswith("2202"):
+            if target["ncm"].startswith("2201") or target["ncm"].startswith("2202") or target["ncm"].startswith("2203"):
                 candidates.append(
                     base_candidate(
                         source,
@@ -250,7 +250,7 @@ def build_beverage_special_candidates(source: dict[str, Any], texts: list[str], 
                         confidence="BAIXA" if is_revoked_context(evidence) else "MEDIA",
                         evidence=evidence,
                         notes=(
-                            "Trecho indica regime/excecao para bebidas das posicoes 22.01/22.02. "
+                            "Trecho indica regime/excecao para bebidas das posicoes 22.01/22.02/22.03. "
                             "Pode conter redacao historica, revogacao ou regime especial; nao inserir sem revisao."
                         ),
                         extra={"revoked_context": is_revoked_context(evidence)},

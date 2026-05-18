@@ -5,7 +5,9 @@ Motor MVP de atualizacao da base tributaria da Tricomplex.
 Escopo atual:
 
 - UF: SP
-- NCMs: `22011000` agua, `22021000` refrigerante, `20099000` suco
+- NCMs: `22011000` agua, `22021000` refrigerante, `20099000` suco,
+  `22030000` cerveja, `84433233` impressora, `84439923` cartucho,
+  `84439933` toner, `48025610` papel, `19059090` alimento
 - Tributos: ICMS, DIFAL, PIS, COFINS, IPI, ICMS-ST
 
 ## Arquivos principais
@@ -72,7 +74,7 @@ python pipeline.py --candidates-file artifacts/20260517_175409/structured_candid
 
 O resultado fica em `db_interpretations_from_candidates.json`. A LLM nao gera SQL; candidatos inseguros entram em `review_items`.
 
-Para o MVP SP + 3 NCMs, o backend aceita como regras de banco:
+Para o MVP SP + NCMs configurados, o backend aceita como regras de banco:
 
 - IPI/TIPI `ready_for_db`;
 - ICMS geral interno SP quando marcado como `general_rate_rule`;
